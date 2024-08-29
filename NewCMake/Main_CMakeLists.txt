@@ -1,0 +1,29 @@
+cmake_minimum_required(VERSION 3.5)
+
+set(CONAN_DISABLE_CHECK_COMPILER ON)
+project(Artillery-March LANGUAGES CXX)
+
+add_subdirectory(Artillery-March)
+add_subdirectory(Artillery-March-Tests)
+
+message(STATUS "Looking for translations in ${CMAKE_SOURCE_DIR}/translations. ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}")
+file(GLOB TS_FILES "${CMAKE_SOURCE_DIR}/translations/*.ts")
+if (NOT TS_FILES)
+    message(STATUS "Translation files not found. Skipping 'lrelase'.")
+else()
+    message(STATUS "Translation files found ${TS_FILES}.")
+    find_package(Qt5 COMPONENTS LinguistTools REQUIRED)
+
+    set(QM_DIR "${CMAKE_BINARY_DIR}/translations")
+    execute_process(COMMAND ${_qt5_linguisttools_install_prefix}/bin/lupdate ${CMAKE_SOURCE_DIR}/${PROJECT_NAME} -ts ${TS_FILES})
+    add_custom_target(translations ALL COMMAND ${CMAKE_COMMAND} -E make_directory "${QM_DIR}")
+
+    foreach(ts_file ${TS_FILES})
+        string(REGEX REPLACE "(.+)/(.+)\.ts" "\\2" translation_name ${ts_file})
+        string(REGEX REPLACE "(.+)/(.+)\.ts" "${QM_DIR}/\\2.qm" qm_file ${ts_file})
+        add_custom_target("translations-release-${translation_name}" ALL DEPENDS translations COMMAND ${Qt5_LRELEASE_EXECUTABLE} ${ts_file} -qm ${qm_file})
+    endforeach()
+
+endif()
+
+add_custom_target(conanfile SOURCES conanfile.py)

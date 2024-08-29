@@ -1,0 +1,45 @@
+cmake_minimum_required(VERSION 3.5)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
+if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+    set(LIBS_LIST ${CONAN_LIBS_DEBUG})
+elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
+    set(LIBS_LIST ${CONAN_LIBS_RELEASE})
+elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+    set(LIBS_LIST ${CONAN_LIBS_RELWITHDEBINFO})
+elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+    set(LIBS_LIST ${CONAN_LIBS_MINSIZEREL})
+endif()
+
+list(APPEND LIBS_LIST ${CONAN_PACKAGE_NAME}-core)
+
+set(TEST_LIB ${CONAN_PACKAGE_NAME}-Tests)
+
+file(GLOB_RECURSE SOURCES_LIST *.h *.cpp)
+find_package(Qt5 COMPONENTS Core Test REQUIRED)
+
+list(FILTER SOURCES_LIST EXCLUDE REGEX "^.*/main\\.cpp$")
+add_library(${TEST_LIB} SHARED ${SOURCES_LIST})
+
+target_include_directories(${TEST_LIB} PRIVATE ${CMAKE_SOURCE_DIR})
+target_include_directories(${TEST_LIB} PRIVATE ${CMAKE_SOURCE_DIR}/${CONAN_PACKAGE_NAME})
+target_link_libraries(${TEST_LIB} PRIVATE Qt5::Core Qt5::Test ${LIBS_LIST})
+
+set_target_properties(${TEST_LIB} PROPERTIES DEBUG_POSTFIX -d)
+
+add_executable(${TEST_LIB}-Runner main.cpp)
+target_link_libraries(${TEST_LIB}-Runner PRIVATE Qt5::Core Qt5::Test ${LIBS_LIST} ${TEST_LIB})
